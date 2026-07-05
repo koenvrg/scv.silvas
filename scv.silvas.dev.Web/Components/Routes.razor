@@ -1,0 +1,10 @@
+@using scv.silvas.dev.Shared.Components.Layout
+
+<Router AppAssembly="typeof(Program).Assembly"
+        AdditionalAssemblies="@(new[] { typeof(scv.silvas.dev.Shared.Components.App).Assembly })"
+        NotFoundPage="typeof(Pages.NotFound)">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(scv.silvas.dev.Shared.Components.Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>

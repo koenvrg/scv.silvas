@@ -1,0 +1,51 @@
+@page "/login"
+@using scv.silvas.dev.Shared.Services
+@inject UserService UserService
+@inject NavigationManager Nav
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <h1>SCV</h1>
+            <p>Silvas.dev Tijdregistratie</p>
+        </div>
+
+        <div class="login-body">
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="alert alert-error">@_error</div>
+            }
+
+            <div class="form-group">
+                <label>Gebruikersnaam</label>
+                <input type="text" @bind="_username" placeholder="dev1 of dev2" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label>Wachtwoord</label>
+                <input type="password" @bind="_password" placeholder="Hetzelfde als gebruikersnaam" class="form-control" />
+            </div>
+            <button class="btn btn-primary btn-full" @onclick="HandleLogin" disabled="@_loading">
+                @if (_loading) { <span>Inloggen...</span> } else { <span>Inloggen</span> }
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _username = "";
+    private string _password = "";
+    private string _error = "";
+    private bool _loading;
+
+    private async Task HandleLogin()
+    {
+        _loading = true;
+        _error = "";
+        var user = await UserService.AuthenticateAsync(_username, _password);
+        if (user != null)
+            Nav.NavigateTo("/dashboard");
+        else
+            _error = "Ongeldige gebruikersnaam of wachtwoord.";
+        _loading = false;
+    }
+}

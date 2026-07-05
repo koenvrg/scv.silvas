@@ -1,0 +1,18 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using scv.silvas.dev.Shared.Components.Layout
+
+<Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="@_additionalAssemblies">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p>Pagina niet gevonden.</p>
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code {
+    private IEnumerable<System.Reflection.Assembly> _additionalAssemblies = Array.Empty<System.Reflection.Assembly>();
+}

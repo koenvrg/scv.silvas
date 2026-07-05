@@ -1,0 +1,42 @@
+@using scv.silvas.dev.Shared.Services
+@inject UserService UserService
+@inject NavigationManager Nav
+
+<nav class="nav-sidebar">
+    <div class="nav-brand">
+        <span class="nav-brand-text">SCV</span>
+    </div>
+    <div class="nav-links">
+        <NavLink class="nav-item" href="/dashboard" Match="NavLinkMatch.All">
+            <span class="nav-icon">&#x2302;</span>
+            <span>Dashboard</span>
+        </NavLink>
+        <NavLink class="nav-item" href="/timeentry">
+            <span class="nav-icon">&#x2B;</span>
+            <span>Registreren</span>
+        </NavLink>
+        <NavLink class="nav-item" href="/overview">
+            <span class="nav-icon">&#x2261;</span>
+            <span>Overzicht</span>
+        </NavLink>
+        <NavLink class="nav-item" href="/leave">
+            <span class="nav-icon">&#x1F4C5;</span>
+            <span>Verlof</span>
+        </NavLink>
+        <NavLink class="nav-item" href="/projects">
+            <span class="nav-icon">&#x1F4BC;</span>
+            <span>Projecten</span>
+        </NavLink>
+    </div>
+    <div class="nav-footer">
+        <button class="btn btn-logout" @onclick="Logout">Uitloggen</button>
+    </div>
+</nav>
+
+@code {
+    private void Logout()
+    {
+        UserService.Logout();
+        Nav.NavigateTo("/login");
+    }
+}

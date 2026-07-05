@@ -1,0 +1,45 @@
+{
+  "Files": [
+    {
+      "Id": "C:\\Users\\Koen\\Documents\\GitHub\\scv.silvas\\scv.silvas.dev.Shared\\obj\\Debug\\net10.0\\scopedcss\\projectbundle\\scv.silvas.dev.Shared.bundle.scp.css",
+      "PackagePath": "staticwebassets\\scv.silvas.dev.Shared.q6uimkdyo4.bundle.scp.css"
+    },
+    {
+      "Id": "C:\\Users\\Koen\\Documents\\GitHub\\scv.silvas\\scv.silvas.dev.Shared\\wwwroot\\background.png",
+      "PackagePath": "staticwebassets\\background.png"
+    },
+    {
+      "Id": "C:\\Users\\Koen\\Documents\\GitHub\\scv.silvas\\scv.silvas.dev.Shared\\wwwroot\\css\\app.css",
+      "PackagePath": "staticwebassets\\css\\app.css"
+    },
+    {
+      "Id": "C:\\Users\\Koen\\Documents\\GitHub\\scv.silvas\\scv.silvas.dev.Shared\\wwwroot\\exampleJsInterop.js",
+      "PackagePath": "staticwebassets\\exampleJsInterop.js"
+    },
+    {
+      "Id": "C:\\Users\\Koen\\Documents\\GitHub\\scv.silvas\\scv.silvas.dev.Shared\\wwwroot\\js\\camera.js",
+      "PackagePath": "staticwebassets\\js\\camera.js"
+    },
+    {
+      "Id": "obj\\Debug\\net10.0\\staticwebassets\\msbuild.build.scv.silvas.dev.Shared.props",
+      "PackagePath": "build\\scv.silvas.dev.Shared.props"
+    },
+    {
+      "Id": "obj\\Debug\\net10.0\\staticwebassets\\msbuild.buildMultiTargeting.scv.silvas.dev.Shared.props",
+      "PackagePath": "buildMultiTargeting\\scv.silvas.dev.Shared.props"
+    },
+    {
+      "Id": "obj\\Debug\\net10.0\\staticwebassets\\msbuild.buildTransitive.scv.silvas.dev.Shared.props",
+      "PackagePath": "buildTransitive\\scv.silvas.dev.Shared.props"
+    },
+    {
+      "Id": "obj\\Debug\\net10.0\\staticwebassets\\msbuild.scv.silvas.dev.Shared.Microsoft.AspNetCore.StaticWebAssetEndpoints.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssetEndpoints.props"
+    },
+    {
+      "Id": "obj\\Debug\\net10.0\\staticwebassets\\msbuild.scv.silvas.dev.Shared.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

@@ -1,0 +1,135 @@
+@page "/dashboard"
+@using scv.silvas.dev.Shared.Models
+@using scv.silvas.dev.Shared.Services
+@inject TimeEntryService TimeEntryService
+@inject LeaveRequestService LeaveRequestService
+@inject ProjectService ProjectService
+@inject UserService UserService
+@inject NavigationManager Nav
+@implements IDisposable
+
+<div class="page-container">
+    <div class="page-header">
+        <h2>Dashboard</h2>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="loading">Laden...</div>
+    }
+    else
+    {
+        <div class="stat-card red">
+            <div class="stat-label">Totale uren deze maand</div>
+            <div class="stat-value">@_totalHours.ToString("F1") uur</div>
+        </div>
+
+        <h3 class="section-title">Recente tijdregistraties</h3>
+        <div class="card">
+            @if (!_recentEntries.Any())
+            {
+                <p class="empty-text">Geen recente registraties</p>
+            }
+            @foreach (var entry in _recentEntries)
+            {
+                <div class="list-item">
+                    <div class="list-item-row">
+                        <span class="item-title">@entry.Description</span>
+                        <span class="item-value red">@entry.Hours.ToString("F1")u</span>
+                    </div>
+                    <div class="item-sub">@entry.Date.ToString("dd/MM/yyyy")</div>
+                    <div class="divider"></div>
+                </div>
+            }
+        </div>
+
+        <h3 class="section-title">Openstaande verlofaanvragen</h3>
+        <div class="card">
+            @if (!_pendingLeaves.Any())
+            {
+                <p class="empty-text">Geen openstaande aanvragen</p>
+            }
+            @foreach (var leave in _pendingLeaves)
+            {
+                <div class="list-item">
+                    <div class="list-item-row">
+                        <span class="item-title">@leave.Reason</span>
+                        <span class="item-value orange">@leave.Status</span>
+                    </div>
+                    <div class="item-sub">@leave.StartDate.ToString("dd/MM/yyyy")</div>
+                    <div class="divider"></div>
+                </div>
+            }
+        </div>
+
+        <h3 class="section-title">Uren per project</h3>
+        <div class="card">
+            @if (!_hoursByProject.Any())
+            {
+                <p class="empty-text">Geen data beschikbaar</p>
+            }
+            @foreach (var kvp in _hoursByProject)
+            {
+                var projectName = _projects.FirstOrDefault(p => p.Id == kvp.Key)?.Name ?? $"Project {kvp.Key}";
+                <div class="list-item">
+                    <div class="list-item-row">
+                        <span class="item-title">@projectName</span>
+                        <span class="item-value green">@kvp.Value.ToString("F1")u</span>
+                    </div>
+                    <div class="divider"></div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool _loading = true;
+    private decimal _totalHours;
+    private List<Models.TimeEntry> _recentEntries = new();
+    private List<LeaveRequest> _pendingLeaves = new();
+    private Dictionary<int, decimal> _hoursByProject = new();
+    private List<Project> _projects = new();
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = UserService.GetCurrentUser();
+        if (user == null) { Nav.NavigateTo("/login"); return; }
+
+        await LoadDataAsync(user.Id);
+        _loading = false;
+        _ = StartPollingAsync(user.Id);
+    }
+
+    private async Task LoadDataAsync(int userId)
+    {
+        var month = DateTime.Now;
+        _totalHours = await TimeEntryService.GetTotalHoursByUserAsync(userId, month);
+        var allEntries = await TimeEntryService.GetTimeEntriesByUserAsync(userId);
+        _recentEntries = allEntries.OrderByDescending(e => e.Date).Take(5).ToList();
+        _pendingLeaves = await LeaveRequestService.GetPendingLeaveRequestsAsync();
+        _hoursByProject = await TimeEntryService.GetHoursByProjectAsync(userId, month);
+        _projects = await ProjectService.GetAllProjectsAsync();
+    }
+
+    private async Task StartPollingAsync(int userId)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(_cts.Token))
+            {
+                await LoadDataAsync(userId);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

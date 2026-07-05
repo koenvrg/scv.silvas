@@ -1,0 +1,286 @@
+@page "/timeentry"
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@using scv.silvas.dev.Shared.Models
+@using scv.silvas.dev.Shared.Services
+@inject TimeEntryService TimeEntryService
+@inject ProjectService ProjectService
+@inject UserService UserService
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="page-container">
+    <div class="page-header">
+        <h2>Uren Registreren</h2>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <div class="alert @(_isError ? "alert-error" : "alert-success")">@_message</div>
+    }
+
+    <div class="card form-card">
+        <div class="form-group">
+            <label>Project</label>
+            <select @bind="_projectId" class="form-control">
+                <option value="0">Selecteer project...</option>
+                @foreach (var project in _projects)
+                {
+                    <option value="@project.Id">@project.Name</option>
+                }
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Datum</label>
+            <input type="date" @bind="_date" class="form-control" />
+        </div>
+        <div class="form-group">
+            <label>Uren</label>
+            <input type="number" @bind="_hours" min="0.5" max="24" step="0.5" class="form-control" />
+        </div>
+        <div class="form-group">
+            <label>Beschrijving</label>
+            <textarea @bind="_description" rows="3" class="form-control" placeholder="Wat heb je gedaan?"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Foto (optioneel)</label>
+
+            @if (_cameraOpen)
+            {
+                <div class="camera-container">
+                    <video id="cameraVideo" autoplay playsinline muted class="camera-video"></video>
+                    <canvas id="cameraCanvas" style="display:none;"></canvas>
+                    <div style="display:flex;gap:8px;margin-top:8px;">
+                        <button class="btn btn-primary" style="flex:1;" @onclick="CapturePhoto">
+                            &#x1F4F8; Maak foto
+                        </button>
+                        <button class="btn btn-secondary" style="flex:1;" @onclick="CloseCamera">
+                            Annuleren
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <div class="photo-upload-btn">
+                        &#x1F4C1; Bestand kiezen
+                        <InputFile OnChange="OnPhotoSelected" accept="image/*"
+                                   style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;" />
+                    </div>
+                    <div class="photo-upload-btn" @onclick="OpenCamera">
+                        &#x1F4F7; Foto maken
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_photoPreview))
+            {
+                <div style="margin-top:10px;position:relative;display:inline-block;">
+                    <img src="@_photoPreview" class="photo-preview" />
+                    <button class="photo-remove-btn" @onclick="RemovePhoto" title="Foto verwijderen">&#x2715;</button>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(_photoError))
+            {
+                <div class="alert alert-error" style="margin-top:8px;padding:8px 12px;">@_photoError</div>
+            }
+        </div>
+        <button class="btn btn-primary btn-full" @onclick="Submit" disabled="@_saving">
+            @(_saving ? "Opslaan..." : "Registreren")
+        </button>
+    </div>
+
+    <h3 class="section-title">Recente registraties</h3>
+    <div class="card">
+        @if (_entries.Count == 0)
+        {
+            <p class="empty-text">Nog geen registraties</p>
+        }
+        @foreach (var entry in _entries.OrderByDescending(e => e.Date).Take(10))
+        {
+            var project = _projects.FirstOrDefault(p => p.Id == entry.ProjectId);
+            <div class="list-item">
+                <div class="list-item-row">
+                    <span class="item-title">@entry.Description</span>
+                    <span class="item-value red">@entry.Hours.ToString("F1")u</span>
+                </div>
+                <div class="item-sub">@project?.Name — @entry.Date.ToString("dd/MM/yyyy")</div>
+                @if (entry.PhotoData != null && entry.PhotoData.Length > 0)
+                {
+                    <img src="data:@entry.PhotoMimeType;base64,@Convert.ToBase64String(entry.PhotoData)"
+                         class="photo-thumb"
+                         @onclick="() => TogglePhoto(entry.Id)" />
+                    @if (_expandedPhotoId == entry.Id)
+                    {
+                        <img src="data:@entry.PhotoMimeType;base64,@Convert.ToBase64String(entry.PhotoData)"
+                             class="photo-full" @onclick="() => _expandedPhotoId = -1" />
+                    }
+                }
+                <div class="divider"></div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<Project> _projects = new();
+    private List<Models.TimeEntry> _entries = new();
+    private int _projectId;
+    private DateTime _date = DateTime.Today;
+    private decimal _hours = 8;
+    private string _description = "";
+    private string _message = "";
+    private bool _isError;
+    private bool _saving;
+
+    private byte[]? _photoData;
+    private string? _photoMimeType;
+    private string? _photoPreview;
+    private string _photoError = "";
+    private int _expandedPhotoId = -1;
+    private bool _cameraOpen;
+    private bool _startCameraOnRender;
+
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = UserService.GetCurrentUser();
+        if (user == null) { Nav.NavigateTo("/login"); return; }
+        _projects = await ProjectService.GetAllProjectsAsync();
+        _entries = await TimeEntryService.GetTimeEntriesByUserAsync(user.Id);
+        _ = StartPollingAsync(user.Id);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_startCameraOnRender)
+        {
+            _startCameraOnRender = false;
+            var success = await JS.InvokeAsync<bool>("cameraHelper.startCamera", "cameraVideo");
+            if (!success)
+            {
+                _cameraOpen = false;
+                _photoError = "Camera kon niet worden geopend. Controleer de camera-rechten.";
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void OpenCamera()
+    {
+        _photoError = "";
+        _cameraOpen = true;
+        _startCameraOnRender = true;
+    }
+
+    private async Task CapturePhoto()
+    {
+        var dataUrl = await JS.InvokeAsync<string?>("cameraHelper.capturePhoto", "cameraVideo", "cameraCanvas");
+        if (!string.IsNullOrEmpty(dataUrl) && dataUrl.Contains(','))
+        {
+            var base64 = dataUrl.Split(',')[1];
+            _photoData = Convert.FromBase64String(base64);
+            _photoMimeType = "image/jpeg";
+            _photoPreview = dataUrl;
+        }
+        await CloseCamera();
+    }
+
+    private async Task CloseCamera()
+    {
+        await JS.InvokeVoidAsync("cameraHelper.stopCamera");
+        _cameraOpen = false;
+    }
+
+    private async Task OnPhotoSelected(InputFileChangeEventArgs e)
+    {
+        _photoError = "";
+        var file = e.File;
+        if (file == null) return;
+
+        const long maxBytes = 10 * 1024 * 1024;
+        if (file.Size > maxBytes) { _photoError = "Foto is te groot (max 10 MB)."; return; }
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxBytes);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            _photoData = ms.ToArray();
+            _photoMimeType = file.ContentType;
+            _photoPreview = $"data:{_photoMimeType};base64,{Convert.ToBase64String(_photoData)}";
+        }
+        catch
+        {
+            _photoError = "Foto kon niet worden geladen.";
+        }
+    }
+
+    private void RemovePhoto()
+    {
+        _photoData = null;
+        _photoMimeType = null;
+        _photoPreview = null;
+        _photoError = "";
+    }
+
+    private void TogglePhoto(int id)
+    {
+        _expandedPhotoId = _expandedPhotoId == id ? -1 : id;
+    }
+
+    private async Task Submit()
+    {
+        var user = UserService.GetCurrentUser();
+        if (user == null) return;
+
+        if (_projectId == 0) { _message = "Selecteer een project."; _isError = true; return; }
+        if (_hours <= 0) { _message = "Voer geldige uren in."; _isError = true; return; }
+        if (string.IsNullOrWhiteSpace(_description)) { _message = "Voer een beschrijving in."; _isError = true; return; }
+
+        _saving = true;
+        await TimeEntryService.CreateTimeEntryAsync(new Models.TimeEntry
+        {
+            UserId = user.Id,
+            ProjectId = _projectId,
+            Date = _date,
+            Hours = _hours,
+            Description = _description,
+            PhotoData = _photoData,
+            PhotoMimeType = _photoMimeType
+        });
+        _entries = await TimeEntryService.GetTimeEntriesByUserAsync(user.Id);
+        _message = "Uren succesvol geregistreerd!";
+        _isError = false;
+        _description = "";
+        _hours = 8;
+        RemovePhoto();
+        _saving = false;
+    }
+
+    private async Task StartPollingAsync(int userId)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(_cts.Token))
+            {
+                if (_saving) continue;
+                _entries = await TimeEntryService.GetTimeEntriesByUserAsync(userId);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    public void Dispose()
+    {
+        if (_cameraOpen)
+            _ = JS.InvokeVoidAsync("cameraHelper.stopCamera");
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

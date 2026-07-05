@@ -1,0 +1,122 @@
+@page "/overview"
+@using scv.silvas.dev.Shared.Models
+@using scv.silvas.dev.Shared.Services
+@inject TimeEntryService TimeEntryService
+@inject ProjectService ProjectService
+@inject UserService UserService
+@inject NavigationManager Nav
+@implements IDisposable
+
+<div class="page-container">
+    <div class="page-header">
+        <h2>Overzicht</h2>
+    </div>
+
+    <div class="filter-row" style="display:flex;gap:10px;align-items:center;">
+        <input type="month" value="@_selectedMonth" class="form-control" style="max-width:200px;"
+               @onchange="OnMonthChanged" />
+    </div>
+
+    @if (_loading)
+    {
+        <div class="loading">Laden...</div>
+    }
+    else
+    {
+        <div class="stat-card red">
+            <div class="stat-label">Totale uren</div>
+            <div class="stat-value">@_totalHours.ToString("F1") uur</div>
+        </div>
+
+        <div class="card">
+            @if (!_entries.Any())
+            {
+                <p class="empty-text">Geen registraties in deze periode</p>
+            }
+            @foreach (var entry in _entries.OrderByDescending(e => e.Date))
+            {
+                var project = _projects.FirstOrDefault(p => p.Id == entry.ProjectId);
+                <div class="list-item">
+                    <div class="list-item-row">
+                        <span class="item-title">@entry.Description</span>
+                        <span class="item-value red">@entry.Hours.ToString("F1")u</span>
+                    </div>
+                    <div class="item-sub">@project?.Name — @entry.Date.ToString("dd/MM/yyyy")</div>
+                    @if (entry.PhotoData != null && entry.PhotoData.Length > 0)
+                    {
+                        <img src="data:@entry.PhotoMimeType;base64,@Convert.ToBase64String(entry.PhotoData)"
+                             class="photo-thumb"
+                             @onclick="() => TogglePhoto(entry.Id)" />
+                        @if (_expandedPhotoId == entry.Id)
+                        {
+                            <img src="data:@entry.PhotoMimeType;base64,@Convert.ToBase64String(entry.PhotoData)"
+                                 class="photo-full" @onclick="() => _expandedPhotoId = -1" />
+                        }
+                    }
+                    <div class="divider"></div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private string _selectedMonth = DateTime.Now.ToString("yyyy-MM");
+    private bool _loading = true;
+    private List<Models.TimeEntry> _entries = new();
+    private List<Project> _projects = new();
+    private decimal _totalHours;
+    private int _expandedPhotoId = -1;
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = UserService.GetCurrentUser();
+        if (user == null) { Nav.NavigateTo("/login"); return; }
+        _projects = await ProjectService.GetAllProjectsAsync();
+        await LoadDataAsync(user.Id);
+        _loading = false;
+        _ = StartPollingAsync(user.Id);
+    }
+
+    private async Task OnMonthChanged(ChangeEventArgs e)
+    {
+        _selectedMonth = e.Value?.ToString() ?? DateTime.Now.ToString("yyyy-MM");
+        var user = UserService.GetCurrentUser();
+        if (user != null) await LoadDataAsync(user.Id);
+    }
+
+    private async Task LoadDataAsync(int userId)
+    {
+        if (DateTime.TryParseExact(_selectedMonth, "yyyy-MM", null, System.Globalization.DateTimeStyles.None, out var month))
+        {
+            _entries = await TimeEntryService.GetTimeEntriesByMonthAsync(userId, month);
+        }
+        _totalHours = _entries.Sum(e => e.Hours);
+    }
+
+    private void TogglePhoto(int id)
+    {
+        _expandedPhotoId = _expandedPhotoId == id ? -1 : id;
+    }
+
+    private async Task StartPollingAsync(int userId)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(_cts.Token))
+            {
+                await LoadDataAsync(userId);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}
