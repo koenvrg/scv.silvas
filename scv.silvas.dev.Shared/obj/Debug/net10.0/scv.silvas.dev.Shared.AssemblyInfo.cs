@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("scv.silvas.dev.Shared")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ae835bca1a81259efe883d9f63a699c0e30cf469")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+10dd587a6df656227bc34d313fd7b97b67bea1d8")]
 [assembly: System.Reflection.AssemblyProductAttribute("scv.silvas.dev.Shared")]
 [assembly: System.Reflection.AssemblyTitleAttribute("scv.silvas.dev.Shared")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

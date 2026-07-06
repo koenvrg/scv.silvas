@@ -1,5 +1,7 @@
 <Solution>
   <Project Path="scv.silvas.dev.Shared/scv.silvas.dev.Shared.csproj" />
+  <Project Path="scv.silvas.dev.Tests/scv.silvas.dev.Tests.csproj" />
+  <Project Path="scv.silvas.dev.UITests/scv.silvas.dev.UITests.csproj" />
   <Project Path="scv.silvas.dev.Web/scv.silvas.dev.Web.csproj" />
   <Project Path="scv.silvas.dev/scv.silvas.dev.csproj" />
 </Solution>
