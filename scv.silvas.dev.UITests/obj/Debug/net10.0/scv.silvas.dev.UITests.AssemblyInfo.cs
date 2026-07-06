@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("scv.silvas.dev.UITests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+10dd587a6df656227bc34d313fd7b97b67bea1d8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+be062639f28e5eeb69b5f5c4201277226dec1757")]
 [assembly: System.Reflection.AssemblyProductAttribute("scv.silvas.dev.UITests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("scv.silvas.dev.UITests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
